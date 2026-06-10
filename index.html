@@ -10,98 +10,182 @@
       box-sizing: border-box;
       margin: 0;
       padding: 0;
+      -webkit-tap-highlight-color: transparent;
     }
 
     html,
     body {
       width: 100%;
-      min-height: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, sans-serif;
       background: #fff;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      color: #111;
     }
 
-    .screen {
+    body.android {
+      font-family: Roboto, "Segoe UI", sans-serif;
+      background: #fafafa;
+    }
+
+    .backdrop {
+      position: fixed;
+      inset: 0;
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
-      min-height: 100dvh;
-      padding: 24px;
+      padding: 16px;
+      background: rgba(0, 0, 0, 0.4);
+    }
+
+    /* iOS UIAlertController */
+    .ios-alert {
+      width: 270px;
+      max-width: calc(100vw - 32px);
+      border-radius: 14px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.82);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.04);
+    }
+
+    @supports not (backdrop-filter: blur(20px)) {
+      .ios-alert {
+        background: #f2f2f2;
+      }
+    }
+
+    .ios-alert-body {
+      padding: 19px 16px 17px;
       text-align: center;
-      gap: 16px;
     }
 
-    .browser-icon {
-      width: 72px;
-      height: 72px;
-      margin-bottom: 4px;
-    }
-
-    .hint {
-      font-size: 15px;
-      line-height: 1.45;
-      color: #666;
-      max-width: 300px;
-    }
-
-    .open-btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      min-width: 220px;
-      margin-top: 8px;
-      padding: 14px 28px;
-      border: none;
-      border-radius: 12px;
-      background: #007aff;
-      color: #fff;
+    .ios-alert-title {
       font-size: 17px;
       font-weight: 600;
-      line-height: 1.2;
+      line-height: 22px;
+      letter-spacing: -0.43px;
+      color: #000;
+    }
+
+    .ios-alert-message {
+      margin-top: 4px;
+      font-size: 13px;
+      font-weight: 400;
+      line-height: 18px;
+      letter-spacing: -0.08px;
+      color: #000;
+    }
+
+    .ios-alert-actions {
+      display: flex;
+      border-top: 0.33px solid rgba(60, 60, 67, 0.29);
+    }
+
+    .ios-alert-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 11px 8px;
+      border: none;
+      background: transparent;
+      font-family: inherit;
+      font-size: 17px;
+      line-height: 22px;
+      letter-spacing: -0.43px;
+      color: #007aff;
       text-decoration: none;
       cursor: pointer;
-      -webkit-tap-highlight-color: transparent;
-      box-shadow: 0 2px 8px rgba(0, 122, 255, 0.28);
-      transition: transform 0.12s ease, opacity 0.12s ease;
+      user-select: none;
     }
 
-    .open-btn:active {
-      transform: scale(0.98);
-      opacity: 0.92;
+    .ios-alert-btn + .ios-alert-btn {
+      border-left: 0.33px solid rgba(60, 60, 67, 0.29);
     }
 
-    .open-btn.android {
-      background: #1a73e8;
-      box-shadow: 0 2px 8px rgba(26, 115, 232, 0.28);
+    .ios-alert-btn:active {
+      background: rgba(120, 120, 128, 0.16);
     }
 
-    .open-btn svg {
-      width: 20px;
-      height: 20px;
-      flex-shrink: 0;
+    .ios-alert-btn-cancel {
+      font-weight: 400;
     }
 
-    .fallback {
-      margin-top: 12px;
-      font-size: 13px;
-      color: #999;
+    .ios-alert-btn-open {
+      font-weight: 600;
     }
 
-    .copy-link {
+    /* Android Material AlertDialog */
+    .md-alert {
+      width: 312px;
+      max-width: calc(100vw - 48px);
+      border-radius: 28px;
+      overflow: hidden;
+      background: #fff;
+      box-shadow:
+        0 11px 15px rgba(0, 0, 0, 0.08),
+        0 9px 46px rgba(0, 0, 0, 0.12);
+    }
+
+    .md-alert-body {
+      padding: 24px 24px 0;
+    }
+
+    .md-alert-title {
+      font-size: 24px;
+      font-weight: 400;
+      line-height: 32px;
+      color: #1f1f1f;
+    }
+
+    .md-alert-message {
+      margin-top: 16px;
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 20px;
+      letter-spacing: 0.25px;
+      color: #49454f;
+    }
+
+    .md-alert-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 24px;
+    }
+
+    .md-alert-btn {
+      min-height: 40px;
+      padding: 10px 24px;
       border: none;
-      background: none;
-      color: #007aff;
-      font-size: 13px;
+      border-radius: 20px;
+      background: transparent;
+      font-family: inherit;
+      font-size: 14px;
       font-weight: 500;
+      line-height: 20px;
+      letter-spacing: 0.1px;
+      color: #1a73e8;
+      text-decoration: none;
       cursor: pointer;
-      padding: 4px 8px;
-      -webkit-tap-highlight-color: transparent;
     }
 
-    .copy-link.copied {
-      color: #34c759;
+    .md-alert-btn:active {
+      background: rgba(26, 115, 232, 0.08);
+    }
+
+    .md-alert-btn-open {
+      background: #1a73e8;
+      color: #fff;
+    }
+
+    .md-alert-btn-open:active {
+      background: #1765cc;
     }
 
     .hidden {
@@ -110,15 +194,28 @@
   </style>
 </head>
 <body>
-  <main id="screen" class="screen">
-    <div id="icon-wrap" aria-hidden="true"></div>
-    <p id="hint" class="hint">Tap the button below to continue</p>
-    <a id="open-btn" class="open-btn" href="#">Continue</a>
-    <p id="fallback" class="fallback hidden">
-      Button not working?
-      <button id="copy-link" class="copy-link" type="button">Copy link</button>
-    </p>
-  </main>
+  <div id="backdrop" class="backdrop">
+    <div id="ios-alert" class="ios-alert hidden" role="alertdialog" aria-modal="true">
+      <div class="ios-alert-body">
+        <p class="ios-alert-title">Open in Safari?</p>
+      </div>
+      <div class="ios-alert-actions">
+        <button id="ios-cancel" class="ios-alert-btn ios-alert-btn-cancel" type="button">Cancel</button>
+        <a id="ios-open" class="ios-alert-btn ios-alert-btn-open" href="#">Open</a>
+      </div>
+    </div>
+
+    <div id="md-alert" class="md-alert hidden" role="alertdialog" aria-modal="true">
+      <div class="md-alert-body">
+        <p id="md-title" class="md-alert-title">Open in browser?</p>
+        <p id="md-message" class="md-alert-message hidden"></p>
+      </div>
+      <div class="md-alert-actions">
+        <button id="md-cancel" class="md-alert-btn" type="button">Cancel</button>
+        <a id="md-open" class="md-alert-btn md-alert-btn-open" href="#">Open</a>
+      </div>
+    </div>
+  </div>
 
   <script>
     (function () {
@@ -223,116 +320,62 @@
         return intent;
       }
 
-      function renderSafariIcon() {
-        return (
-          '<svg class="browser-icon" viewBox="0 0 72 72">' +
-          '<circle cx="36" cy="36" r="34" fill="#007AFF"/>' +
-          '<circle cx="36" cy="36" r="28" fill="#fff"/>' +
-          '<polygon points="36,14 42,36 36,58 30,36" fill="#FF3B30"/>' +
-          '<polygon points="14,36 36,30 58,36 36,42" fill="#34C759"/>' +
-          '<circle cx="36" cy="36" r="4" fill="#007AFF"/>' +
-          "</svg>"
-        );
-      }
+      function setupAndroidFallback(btn) {
+        btn.addEventListener("click", function () {
+          var opened = false;
 
-      function renderChromeIcon() {
-        return (
-          '<svg class="browser-icon" viewBox="0 0 72 72">' +
-          '<circle cx="36" cy="36" r="34" fill="#4285F4"/>' +
-          '<circle cx="36" cy="36" r="22" fill="#fff"/>' +
-          '<circle cx="36" cy="36" r="10" fill="#4285F4"/>' +
-          '<circle cx="48" cy="24" r="7" fill="#EA4335"/>' +
-          '<circle cx="24" cy="24" r="7" fill="#FBBC05"/>' +
-          '<circle cx="24" cy="48" r="7" fill="#34A853"/>' +
-          "</svg>"
-        );
-      }
+          setTimeout(function () {
+            if (!opened && document.visibilityState === "visible") {
+              btn.href = buildAndroidRedirectUrl(targetUrl, false);
+            }
+          }, 1200);
 
-      function setupCopyLink(button) {
-        button.addEventListener("click", function () {
-          var done = function () {
-            button.textContent = "Copied!";
-            button.classList.add("copied");
-          };
-
-          if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(targetUrl).then(done).catch(function () {
-              fallbackCopy(done);
-            });
-          } else {
-            fallbackCopy(done);
-          }
+          window.addEventListener(
+            "pagehide",
+            function () {
+              opened = true;
+            },
+            { once: true }
+          );
         });
-
-        function fallbackCopy(onSuccess) {
-          var input = document.createElement("textarea");
-          input.value = targetUrl;
-          input.setAttribute("readonly", "");
-          input.style.position = "fixed";
-          input.style.opacity = "0";
-          document.body.appendChild(input);
-          input.select();
-          try {
-            document.execCommand("copy");
-            onSuccess();
-          } catch (error) {
-            button.textContent = "Copy failed";
-          }
-          document.body.removeChild(input);
-        }
       }
 
       function setup() {
-        var screen = document.getElementById("screen");
-        var iconWrap = document.getElementById("icon-wrap");
-        var hint = document.getElementById("hint");
-        var openBtn = document.getElementById("open-btn");
-        var fallback = document.getElementById("fallback");
-        var copyLink = document.getElementById("copy-link");
-
         if (!isInAppBrowser()) {
           window.location.replace(targetUrl);
           return;
         }
 
+        var backdrop = document.getElementById("backdrop");
+
         if (isIOS()) {
-          iconWrap.innerHTML = renderSafariIcon();
-          hint.textContent = "Tap the button to open in Safari";
-          openBtn.textContent = "Open in Safari";
-          openBtn.href = buildIOSRedirectUrl(targetUrl);
+          var iosAlert = document.getElementById("ios-alert");
+          var iosOpen = document.getElementById("ios-open");
+          var iosCancel = document.getElementById("ios-cancel");
+
+          iosAlert.classList.remove("hidden");
+          iosOpen.href = buildIOSRedirectUrl(targetUrl);
+
+          iosCancel.addEventListener("click", function () {
+            backdrop.classList.add("hidden");
+          });
         } else if (isAndroid()) {
-          iconWrap.innerHTML = renderChromeIcon();
-          openBtn.classList.add("android");
-          hint.textContent = "Tap the button to open in your browser";
-          openBtn.textContent = "Open in Browser";
-          openBtn.href = buildAndroidRedirectUrl(targetUrl, true);
+          document.body.classList.add("android");
 
-          openBtn.addEventListener("click", function (event) {
-            var opened = false;
+          var mdAlert = document.getElementById("md-alert");
+          var mdOpen = document.getElementById("md-open");
+          var mdCancel = document.getElementById("md-cancel");
 
-            setTimeout(function () {
-              if (!opened && document.visibilityState === "visible") {
-                openBtn.href = buildAndroidRedirectUrl(targetUrl, false);
-              }
-            }, 1200);
+          mdAlert.classList.remove("hidden");
+          mdOpen.href = buildAndroidRedirectUrl(targetUrl, true);
+          setupAndroidFallback(mdOpen);
 
-            window.addEventListener(
-              "pagehide",
-              function () {
-                opened = true;
-              },
-              { once: true }
-            );
+          mdCancel.addEventListener("click", function () {
+            backdrop.classList.add("hidden");
           });
         } else {
-          iconWrap.innerHTML = renderSafariIcon();
-          hint.textContent = "Tap the button to continue";
-          openBtn.textContent = "Continue";
-          openBtn.href = targetUrl;
+          window.location.replace(targetUrl);
         }
-
-        fallback.classList.remove("hidden");
-        setupCopyLink(copyLink);
       }
 
       setup();

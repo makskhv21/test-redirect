@@ -131,14 +131,69 @@
 
   <script>
     (function () {
-      var params = new URLSearchParams(window.location.search);
-      var targetUrl = params.get("to") || params.get("url") || "https://example.com";
+      var DEFAULT_URL = "https://example.com";
 
-      try {
-        targetUrl = new URL(targetUrl, window.location.href).href;
-      } catch (error) {
-        targetUrl = "https://example.com";
+      function encodeTarget(url) {
+        return btoa(unescape(encodeURIComponent(url)))
+          .replace(/\+/g, "-")
+          .replace(/\//g, "_")
+          .replace(/=+$/, "");
       }
+
+      function decodeTarget(value) {
+        var base64 = value.replace(/-/g, "+").replace(/_/g, "/");
+
+        while (base64.length % 4) {
+          base64 += "=";
+        }
+
+        return decodeURIComponent(escape(atob(base64)));
+      }
+
+      function normalizeTarget(url) {
+        try {
+          return new URL(url, window.location.href).href;
+        } catch (error) {
+          return DEFAULT_URL;
+        }
+      }
+
+      function resolveTargetUrl() {
+        var hash = window.location.hash.replace(/^#/, "");
+        var params = new URLSearchParams(window.location.search);
+        var raw = "";
+        var shouldCleanUrl = false;
+
+        if (hash) {
+          try {
+            raw = decodeTarget(hash);
+          } catch (error) {
+            raw = decodeURIComponent(hash);
+          }
+        } else if (params.get("d")) {
+          try {
+            raw = decodeTarget(params.get("d"));
+            shouldCleanUrl = true;
+          } catch (error) {
+            raw = DEFAULT_URL;
+          }
+        } else if (params.get("to") || params.get("url")) {
+          raw = params.get("to") || params.get("url");
+          shouldCleanUrl = true;
+        } else {
+          raw = DEFAULT_URL;
+        }
+
+        var targetUrl = normalizeTarget(raw);
+
+        if (shouldCleanUrl) {
+          history.replaceState(null, "", location.pathname + "#" + encodeTarget(targetUrl));
+        }
+
+        return targetUrl;
+      }
+
+      var targetUrl = resolveTargetUrl();
 
       var ua = navigator.userAgent || "";
       var uaLower = ua.toLowerCase();
@@ -293,6 +348,10 @@
       }
 
       setup();
+
+      window.buildRedirectLink = function (url, base) {
+        return (base || location.origin + location.pathname) + "#" + encodeTarget(normalizeTarget(url));
+      };
     })();
   </script>
 </body>

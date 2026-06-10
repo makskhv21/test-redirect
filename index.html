@@ -15,11 +15,10 @@
     html,
     body {
       width: 100%;
-      height: 100%;
+      min-height: 100%;
       background: #fff;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       color: #111;
-      overflow: hidden;
     }
 
     .screen {
@@ -30,45 +29,95 @@
       min-height: 100dvh;
       padding: 24px;
       text-align: center;
+      gap: 16px;
     }
 
-    .safari-icon {
+    .browser-icon {
       width: 72px;
       height: 72px;
-      margin-bottom: 20px;
+      margin-bottom: 4px;
     }
 
     .hint {
       font-size: 15px;
-      line-height: 1.4;
+      line-height: 1.45;
       color: #666;
-      max-width: 280px;
+      max-width: 300px;
     }
 
-    .tap-zone {
-      position: fixed;
-      inset: 0;
+    .open-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-width: 220px;
+      margin-top: 8px;
+      padding: 14px 28px;
+      border: none;
+      border-radius: 12px;
+      background: #007aff;
+      color: #fff;
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 1.2;
+      text-decoration: none;
       cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      box-shadow: 0 2px 8px rgba(0, 122, 255, 0.28);
+      transition: transform 0.12s ease, opacity 0.12s ease;
+    }
+
+    .open-btn:active {
+      transform: scale(0.98);
+      opacity: 0.92;
+    }
+
+    .open-btn.android {
+      background: #1a73e8;
+      box-shadow: 0 2px 8px rgba(26, 115, 232, 0.28);
+    }
+
+    .open-btn svg {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    .fallback {
+      margin-top: 12px;
+      font-size: 13px;
+      color: #999;
+    }
+
+    .copy-link {
+      border: none;
+      background: none;
+      color: #007aff;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 4px 8px;
       -webkit-tap-highlight-color: transparent;
     }
 
+    .copy-link.copied {
+      color: #34c759;
+    }
+
     .hidden {
-      display: none;
+      display: none !important;
     }
   </style>
 </head>
 <body>
-  <div id="tap-zone" class="tap-zone" aria-label="Continue"></div>
-
   <main id="screen" class="screen">
-    <svg class="safari-icon" viewBox="0 0 72 72" aria-hidden="true">
-      <circle cx="36" cy="36" r="34" fill="#007AFF"/>
-      <circle cx="36" cy="36" r="28" fill="#fff"/>
-      <polygon points="36,14 42,36 36,58 30,36" fill="#FF3B30"/>
-      <polygon points="14,36 36,30 58,36 36,42" fill="#34C759"/>
-      <circle cx="36" cy="36" r="4" fill="#007AFF"/>
-    </svg>
-    <p id="hint" class="hint">Tap to continue</p>
+    <div id="icon-wrap" aria-hidden="true"></div>
+    <p id="hint" class="hint">Tap the button below to continue</p>
+    <a id="open-btn" class="open-btn" href="#">Continue</a>
+    <p id="fallback" class="fallback hidden">
+      Button not working?
+      <button id="copy-link" class="copy-link" type="button">Copy link</button>
+    </p>
   </main>
 
   <script>
@@ -85,6 +134,30 @@
       var ua = navigator.userAgent || "";
       var uaLower = ua.toLowerCase();
 
+      var IN_APP_PATTERNS = [
+        "tiktok",
+        "bytedancewebview",
+        "musical_ly",
+        "instagram",
+        "fban",
+        "fbav",
+        "fbios",
+        "fb_iab",
+        "fb4a",
+        "twitter",
+        "linkedinapp",
+        "snapchat",
+        "pinterest",
+        "reddit",
+        "whatsapp",
+        "line/",
+        "micromessenger",
+        "threads",
+        "kakaotalk",
+        "naver",
+        "electron"
+      ];
+
       function isIOS() {
         return /iphone|ipad|ipod/i.test(ua);
       }
@@ -99,29 +172,21 @@
       }
 
       function isInAppBrowser() {
-        var patterns = [
-          "tiktok",
-          "bytedancewebview",
-          "musical_ly",
-          "instagram",
-          "fban",
-          "fbav",
-          "fbios",
-          "fb_iab",
-          "fb4a",
-          "twitter",
-          "linkedinapp",
-          "snapchat",
-          "pinterest",
-          "reddit",
-          "whatsapp",
-          "line/",
-          "micromessenger"
-        ];
-
-        return patterns.some(function (pattern) {
+        if (IN_APP_PATTERNS.some(function (pattern) {
           return uaLower.indexOf(pattern) !== -1;
-        });
+        })) {
+          return true;
+        }
+
+        if (isIOS() && uaLower.indexOf("safari") === -1 && uaLower.indexOf("crios") === -1) {
+          return true;
+        }
+
+        if (isAndroid() && (/\bwv\b/.test(uaLower) || uaLower.indexOf("version/") !== -1)) {
+          return true;
+        }
+
+        return false;
       }
 
       function buildIOSRedirectUrl(url) {
@@ -131,46 +196,99 @@
           return "x-safari-" + url;
         }
 
-        if (iosVersion > 0) {
+        if (iosVersion >= 15) {
           return "com-apple-mobilesafari-tab:" + url;
         }
 
         return (
           "shortcuts://x-callback-url/run-shortcut?name=" +
-          crypto.randomUUID() +
+          encodeURIComponent("Open URL") +
           "&x-error=" +
           encodeURIComponent(url)
         );
       }
 
-      function buildAndroidRedirectUrl(url) {
+      function buildAndroidRedirectUrl(url, useChrome) {
         var stripped = url.replace(/^https?:\/\//, "");
-        return (
+        var intent =
           "intent://" +
           stripped +
-          "#Intent;scheme=https;S.browser_fallback_url=" +
-          encodeURIComponent(url) +
-          ";end"
+          "#Intent;scheme=https;action=android.intent.action.VIEW;";
+
+        if (useChrome) {
+          intent += "package=com.android.chrome;";
+        }
+
+        intent += "S.browser_fallback_url=" + encodeURIComponent(url) + ";end";
+        return intent;
+      }
+
+      function renderSafariIcon() {
+        return (
+          '<svg class="browser-icon" viewBox="0 0 72 72">' +
+          '<circle cx="36" cy="36" r="34" fill="#007AFF"/>' +
+          '<circle cx="36" cy="36" r="28" fill="#fff"/>' +
+          '<polygon points="36,14 42,36 36,58 30,36" fill="#FF3B30"/>' +
+          '<polygon points="14,36 36,30 58,36 36,42" fill="#34C759"/>' +
+          '<circle cx="36" cy="36" r="4" fill="#007AFF"/>' +
+          "</svg>"
         );
       }
 
-      function openInSystemBrowser() {
-        if (isIOS()) {
-          window.location.href = buildIOSRedirectUrl(targetUrl);
-          return;
-        }
+      function renderChromeIcon() {
+        return (
+          '<svg class="browser-icon" viewBox="0 0 72 72">' +
+          '<circle cx="36" cy="36" r="34" fill="#4285F4"/>' +
+          '<circle cx="36" cy="36" r="22" fill="#fff"/>' +
+          '<circle cx="36" cy="36" r="10" fill="#4285F4"/>' +
+          '<circle cx="48" cy="24" r="7" fill="#EA4335"/>' +
+          '<circle cx="24" cy="24" r="7" fill="#FBBC05"/>' +
+          '<circle cx="24" cy="48" r="7" fill="#34A853"/>' +
+          "</svg>"
+        );
+      }
 
-        if (isAndroid()) {
-          window.location.href = buildAndroidRedirectUrl(targetUrl);
-          return;
-        }
+      function setupCopyLink(button) {
+        button.addEventListener("click", function () {
+          var done = function () {
+            button.textContent = "Copied!";
+            button.classList.add("copied");
+          };
 
-        window.location.replace(targetUrl);
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(targetUrl).then(done).catch(function () {
+              fallbackCopy(done);
+            });
+          } else {
+            fallbackCopy(done);
+          }
+        });
+
+        function fallbackCopy(onSuccess) {
+          var input = document.createElement("textarea");
+          input.value = targetUrl;
+          input.setAttribute("readonly", "");
+          input.style.position = "fixed";
+          input.style.opacity = "0";
+          document.body.appendChild(input);
+          input.select();
+          try {
+            document.execCommand("copy");
+            onSuccess();
+          } catch (error) {
+            button.textContent = "Copy failed";
+          }
+          document.body.removeChild(input);
+        }
       }
 
       function setup() {
-        var tapZone = document.getElementById("tap-zone");
+        var screen = document.getElementById("screen");
+        var iconWrap = document.getElementById("icon-wrap");
         var hint = document.getElementById("hint");
+        var openBtn = document.getElementById("open-btn");
+        var fallback = document.getElementById("fallback");
+        var copyLink = document.getElementById("copy-link");
 
         if (!isInAppBrowser()) {
           window.location.replace(targetUrl);
@@ -178,27 +296,43 @@
         }
 
         if (isIOS()) {
-          hint.textContent = "Tap to open in Safari";
+          iconWrap.innerHTML = renderSafariIcon();
+          hint.textContent = "Tap the button to open in Safari";
+          openBtn.textContent = "Open in Safari";
+          openBtn.href = buildIOSRedirectUrl(targetUrl);
         } else if (isAndroid()) {
-          hint.textContent = "Tap to open in browser";
+          iconWrap.innerHTML = renderChromeIcon();
+          openBtn.classList.add("android");
+          hint.textContent = "Tap the button to open in your browser";
+          openBtn.textContent = "Open in Browser";
+          openBtn.href = buildAndroidRedirectUrl(targetUrl, true);
+
+          openBtn.addEventListener("click", function (event) {
+            var opened = false;
+
+            setTimeout(function () {
+              if (!opened && document.visibilityState === "visible") {
+                openBtn.href = buildAndroidRedirectUrl(targetUrl, false);
+              }
+            }, 1200);
+
+            window.addEventListener(
+              "pagehide",
+              function () {
+                opened = true;
+              },
+              { once: true }
+            );
+          });
         } else {
-          hint.textContent = "Tap to continue";
+          iconWrap.innerHTML = renderSafariIcon();
+          hint.textContent = "Tap the button to continue";
+          openBtn.textContent = "Continue";
+          openBtn.href = targetUrl;
         }
 
-        var opened = false;
-
-        function handleTap(event) {
-          if (opened) {
-            return;
-          }
-
-          opened = true;
-          event.preventDefault();
-          openInSystemBrowser();
-        }
-
-        tapZone.addEventListener("click", handleTap, { passive: false });
-        tapZone.addEventListener("touchend", handleTap, { passive: false });
+        fallback.classList.remove("hidden");
+        setupCopyLink(copyLink);
       }
 
       setup();

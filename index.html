@@ -186,12 +186,12 @@
           return match ? parseInt(match[1], 10) : 0;
         }
 
-        function isInAppBrowser() {
+        function detectInAppApp() {
           for (var i = 0; i < IN_APP_APPS.length; i++) {
             var app = IN_APP_APPS[i];
             for (var j = 0; j < app.patterns.length; j++) {
               if (uaLower.indexOf(app.patterns[j]) !== -1) {
-                return true;
+                return app.id;
               }
             }
           }
@@ -201,17 +201,21 @@
             uaLower.indexOf("safari") === -1 &&
             uaLower.indexOf("crios") === -1
           ) {
-            return true;
+            return "generic-ios";
           }
 
           if (
             isAndroid() &&
             (/\bwv\b/.test(uaLower) || uaLower.indexOf("version/") !== -1)
           ) {
-            return true;
+            return "generic-android";
           }
 
-          return false;
+          return null;
+        }
+
+        function isInAppBrowser() {
+          return detectInAppApp() !== null;
         }
 
         function isSafariBrowser() {
@@ -232,7 +236,7 @@
           );
         }
 
-        function buildSafariUrl(url) {
+        function buildSafariScheme(url) {
           var iosVersion = getIOSVersion();
 
           if (iosVersion >= 17) {
@@ -251,7 +255,7 @@
           );
         }
 
-        function buildChromeUrl(url) {
+        function buildChromeIntent(url) {
           var stripped = url.replace(/^https?:\/\//, "");
           return (
             "intent://" +
@@ -264,19 +268,44 @@
           );
         }
 
-        function buildChromeFallbackUrl(url) {
-          return "googlechrome://navigate?url=" + encodeURIComponent(url);
+        function buildIOSEscapeUrls(url, appId) {
+          var urls = [];
+
+          if (appId === "instagram" || appId === "threads") {
+            urls.push("instagram://extbrowser/?url=" + encodeURIComponent(url));
+          }
+
+          urls.push(buildSafariScheme(url));
+
+          if (getIOSVersion() >= 15 && getIOSVersion() < 17) {
+            urls.push("com-apple-mobilesafari-tab:" + url);
+          }
+
+          return urls;
         }
 
-        function bindOpenButton(openUrl, fallbackUrl) {
-          var btnOpen = document.getElementById("btn-open");
-          var btnCancel = document.getElementById("btn-cancel");
-          var escaped = false;
+        function buildAndroidEscapeUrls(url) {
+          return [
+            buildChromeIntent(url),
+            "googlechrome://navigate?url=" + encodeURIComponent(url),
+            "intent://" +
+              url.replace(/^https?:\/\//, "") +
+              "#Intent;scheme=https;action=android.intent.action.VIEW;package=com.android.chrome;end",
+          ];
+        }
 
-          btnOpen.href = openUrl;
-          btnCancel.addEventListener("click", function (event) {
-            event.preventDefault();
-          });
+        function navigateTo(url) {
+          var link = document.createElement("a");
+          link.href = url;
+          link.style.display = "none";
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+
+        function tryEscapeUrls(urls) {
+          var escaped = false;
+          var index = 0;
 
           function markEscaped() {
             escaped = true;
@@ -289,18 +318,51 @@
             }
           });
 
-          if (fallbackUrl) {
-            btnOpen.addEventListener("click", function () {
+          function tryNext() {
+            if (escaped || index >= urls.length) {
+              return;
+            }
+
+            var nextUrl = urls[index];
+            index += 1;
+
+            window.location.href = nextUrl;
+            navigateTo(nextUrl);
+
+            if (index < urls.length) {
               setTimeout(function () {
                 if (!escaped && document.visibilityState === "visible") {
-                  btnOpen.href = fallbackUrl;
+                  tryNext();
                 }
-              }, 1200);
-            });
+              }, 700);
+            }
           }
+
+          tryNext();
         }
 
-        function showEscapeDialog(openUrl, fallbackUrl, browserLabel) {
+        function bindOpenButton(escapeUrls) {
+          var btnOpen = document.getElementById("btn-open");
+          var btnCancel = document.getElementById("btn-cancel");
+          var opening = false;
+
+          btnOpen.href = escapeUrls[0] || TARGET_URL;
+
+          btnCancel.addEventListener("click", function (event) {
+            event.preventDefault();
+          });
+
+          btnOpen.addEventListener("click", function (event) {
+            event.preventDefault();
+            if (opening) {
+              return;
+            }
+            opening = true;
+            tryEscapeUrls(escapeUrls);
+          });
+        }
+
+        function showEscapeDialog(escapeUrls, browserLabel) {
           var alertEl = document.getElementById("alert");
           var alertText = document.getElementById("alert-text");
 
@@ -311,11 +373,12 @@
           alertText.innerHTML =
             "Open this page in &ldquo;" + browserLabel + "&rdquo;?";
           alertEl.classList.remove("hidden");
-          bindOpenButton(openUrl, fallbackUrl);
+          bindOpenButton(escapeUrls);
         }
 
         function setup() {
           var targetUrl = TARGET_URL;
+          var inAppApp = detectInAppApp();
 
           if (isIOS()) {
             if (isSafariBrowser()) {
@@ -323,7 +386,7 @@
               return;
             }
 
-            showEscapeDialog(buildSafariUrl(targetUrl), null, "Safari");
+            showEscapeDialog(buildIOSEscapeUrls(targetUrl, inAppApp), "Safari");
             return;
           }
 
@@ -333,11 +396,7 @@
               return;
             }
 
-            showEscapeDialog(
-              buildChromeUrl(targetUrl),
-              buildChromeFallbackUrl(targetUrl),
-              "Chrome",
-            );
+            showEscapeDialog(buildAndroidEscapeUrls(targetUrl), "Chrome");
             return;
           }
 
